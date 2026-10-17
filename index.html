@@ -653,16 +653,62 @@ if (typeof module !== 'undefined') module.exports = DSP;
   }
 
   // reference tone: plucked-ish tone with harmonics
+  // reference tone: plucked steel/nylon string (Karplus-Strong with exact fractional tuning)
+  var tonePlay = null;
+  function pluckRender(sr, f, opt) {
+    var len = Math.ceil(sr * opt.dur), out = new Float32Array(len), seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647 * 2 - 1; }
+    opt.strings.forEach(function (st) {
+      var P = sr / f, b = opt.bright, N = Math.max(2, Math.floor(P - b - 0.2)), d = P - b - N, C = (1 - d) / (1 + d);
+      var buf = new Float32Array(N), i = 0, x1 = 0, ax = 0, ay = 0, g = Math.pow(10, -3 / (f * opt.t60));
+      function pluck(amp, tone) {
+        var e = new Float32Array(N), lp = 0, k, pk = Math.max(1, Math.round(opt.pos * N)), mean = 0, peak = 1e-9;
+        for (k = 0; k < N; k++) { lp += tone * (rnd() - lp); e[k] = lp; }
+        for (k = N - 1; k >= pk; k--) e[k] -= e[k - pk];
+        for (k = 0; k < N; k++) mean += e[k] / N;
+        for (k = 0; k < N; k++) { e[k] -= mean; peak = Math.max(peak, Math.abs(e[k])); }
+        for (k = 0; k < N; k++) buf[(i + k) % N] += e[k] / peak * amp;
+      }
+      var strikes = opt.strikes.map(function (s) { return { n: Math.floor((s.t + st.delay) * sr), amp: s.amp * st.amp, tone: s.tone }; }), si = 0;
+      for (var n = strikes[0].n; n < len; n++) {
+        while (si < strikes.length && n >= strikes[si].n) { pluck(strikes[si].amp, strikes[si].tone); si++; }
+        var x = buf[i], y = g * ((1 - b) * x + b * x1); x1 = x;
+        var ap = C * y + ax - C * ay; ax = y; ay = ap;
+        buf[i] = ap; i = (i + 1) % N;
+        out[n] += ap;
+      }
+    });
+    var peak = 1e-9; for (var n2 = 0; n2 < len; n2++) peak = Math.max(peak, Math.abs(out[n2]));
+    for (n2 = 0; n2 < len; n2++) { out[n2] *= 0.8 / peak; if (n2 > len - sr * 0.15) out[n2] *= (len - n2) / (sr * 0.15); }
+    return out;
+  }
+  function toneOpts() {
+    if (!isSaz()) return { bright: 0.42, t60: 3.2, pos: 0.18, dur: 3.2, strings: [{ delay: 0, amp: 1 }],
+      strikes: [{ t: 0.02, amp: 1, tone: 0.55 }] };
+    var uz = state.instr === "uzun";
+    // two strings of the course in exact unison, struck a few ms apart by the tezene; then restruck so the note keeps sounding
+    return { bright: uz ? 0.15 : 0.12, t60: uz ? 4 : 2.8, pos: uz ? 0.1 : 0.08, dur: 3.4,
+      strings: [{ delay: 0, amp: 1 }, { delay: 0.0045, amp: 0.75 }],
+      strikes: [{ t: 0.02, amp: 1, tone: 0.9 }, { t: 0.9, amp: 0.8, tone: 0.8 }, { t: 1.75, amp: 0.8, tone: 0.8 }] };
+  }
+  function bodyEQ(ctx, dest) {
+    if (!isSaz()) { var ls = ctx.createBiquadFilter(); ls.type = "lowshelf"; ls.frequency.value = 130; ls.gain.value = 3; ls.connect(dest); return ls; }
+    var nodes = [["highpass", 90, 0, 0.7], ["peaking", 230, 3, 1], ["peaking", 1100, 2.5, 1.4], ["peaking", 3300, 4, 1]].map(function (p) {
+      var f = ctx.createBiquadFilter(); f.type = p[0]; f.frequency.value = p[1]; f.gain.value = p[2]; f.Q.value = p[3]; return f;
+    });
+    for (var i = 1; i < nodes.length; i++) nodes[i - 1].connect(nodes[i]);
+    nodes[nodes.length - 1].connect(dest);
+    return nodes[0];
+  }
   $("#t-tone").addEventListener("click", function () {
     var list = strings(), s = list[state.lock !== null ? state.lock : 0];
     var ctx = getCtx(); if (ctx.resume) ctx.resume();
-    var f = hz(s.midi), t = ctx.currentTime, g = ctx.createGain();
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.01); g.gain.exponentialRampToValueAtTime(0.12, t + 1.2); g.gain.linearRampToValueAtTime(0, t + 2.5);
-    g.connect(ctx.destination);
-    [[1, 1], [2, 0.45], [3, 0.25], [4, 0.12]].forEach(function (h) {
-      var o = ctx.createOscillator(), og = ctx.createGain(); o.frequency.value = f * h[0]; og.gain.value = h[1];
-      o.connect(og); og.connect(g); o.start(t); o.stop(t + 2.6);
-    });
+    if (tonePlay) { try { tonePlay.stop(); } catch (e) {} tonePlay = null; }
+    var f = hz(s.midi), data = pluckRender(ctx.sampleRate, f, toneOpts());
+    var buf = ctx.createBuffer(1, data.length, ctx.sampleRate); buf.getChannelData(0).set(data);
+    var src = ctx.createBufferSource(), vol = ctx.createGain(); src.buffer = buf; vol.gain.value = 0.9;
+    vol.connect(ctx.destination); src.connect(bodyEQ(ctx, vol));
+    src.start(ctx.currentTime + 0.03); tonePlay = src;
     $("#t-status").classList.remove("err");
     $("#t-status").textContent = s.sub + " referansı: " + (isSaz() ? "notada " + s.label + ", duyulan " : "") + nmStr(s.midi) + " · " + f.toFixed(2).replace(".", ",") + " Hz";
   });
