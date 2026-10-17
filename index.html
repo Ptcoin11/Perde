@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Perde Akort">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+</head>
+<body>
+<title>Perde Akort</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow working column. Instrument switch, then the tuner dial as the single framed object; the guide reads like a short method-book chapter. */
+:root {
+  --bg: #EBEFF2;
+  --surface: #FFFFFF;
+  --surface-2: #F3F6F8;
+  --ink: #13202E;
+  --muted: #5A6878;
+  --line: #D3DAE1;
+  --accent: #17656F;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEDEF;
+  --good: #2B7A4B;
+  --warn: #A86A12;
+  --bad: #B23A2E;
+  --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D131A; --surface: #151E28; --surface-2: #1B2632; --ink: #E3EAF1; --muted: #93A2B2; --line: #2A3846;
+    --accent: #62C2CC; --accent-ink: #0D131A; --accent-soft: #1A3940; --good: #5DC98C; --warn: #E2A43C; --bad: #EF7468;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D131A; --surface: #151E28; --surface-2: #1B2632; --ink: #E3EAF1; --muted: #93A2B2; --line: #2A3846;
+  --accent: #62C2CC; --accent-ink: #0D131A; --accent-soft: #1A3940; --good: #5DC98C; --warn: #E2A43C; --bad: #EF7468;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 56px; display: grid; gap: 18px; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 20px; }
+.brand h1 { font-family: var(--display); font-weight: 400; font-size: 2.6rem; line-height: 1; margin: 0; }
+.brand h1 i { color: var(--accent); }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 0.86rem; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--muted); padding: 7px 16px; border-radius: 999px; cursor: pointer; font-weight: 500; }
+.seg button[aria-selected="true"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.bar { display: grid; gap: 10px; padding-block: 14px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.opts { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 0.9rem; }
+.field { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); min-width: 0; }
+.field select, .field input { background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; color: var(--ink); min-width: 0; max-width: 100%; }
+.field input { width: 5.4em; font-family: var(--mono); font-size: 0.86rem; }
+.note { font-size: 0.85rem; color: var(--muted); margin: 0; }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 9px 16px; cursor: pointer; font-weight: 500; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn svg { width: 16px; height: 16px; flex: none; }
+
+.tuner { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding-block: 22px 18px; padding-inline: 16px; display: grid; gap: 14px; justify-items: center; }
+.readout { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.note-big { font-family: var(--display); font-size: 5.6rem; line-height: 1; display: flex; align-items: flex-start; min-height: 5.6rem; }
+.note-big sub { font-family: var(--mono); font-size: 1.1rem; color: var(--muted); align-self: flex-end; margin: 0 0 0.8rem 4px; }
+.cents { font-family: var(--mono); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.cents.good { color: var(--good); } .cents.warn { color: var(--warn); } .cents.bad { color: var(--bad); }
+.hz { font-family: var(--mono); font-size: 0.84rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dir { font-size: 0.92rem; font-weight: 600; min-height: 1.4em; }
+.gauge { width: 100%; max-width: 440px; }
+.gauge svg { width: 100%; height: auto; display: block; }
+.strobe { width: 100%; max-width: 440px; height: 34px; border-radius: 6px; border: 1px solid var(--line); display: block; }
+.strings { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.string { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 6px 10px; display: grid; justify-items: center; cursor: pointer; min-width: 70px; }
+.string b { font-weight: 600; }
+.string small { font-family: var(--mono); color: var(--muted); font-size: 0.7rem; white-space: nowrap; }
+.string[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.string.hit { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+.status { font-size: 0.88rem; color: var(--muted); text-align: center; max-width: 52ch; }
+.status.err { color: var(--bad); }
+
+/* guide */
+.guide { display: grid; gap: 26px; }
+.guide section { display: grid; gap: 10px; }
+.guide h2 { font-family: var(--display); font-weight: 400; font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+.guide h3 { font-size: 1rem; margin: 6px 0 0; }
+.guide p, .guide li { max-width: 66ch; }
+.guide p { margin: 0; }
+.guide ol, .guide ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.eyebrow { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 600; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+td.mono { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); }
+tr.sel td { background: var(--accent-soft); }
+.callout { background: var(--surface-2); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.duzen-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.dcard { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.dcard b { font-family: var(--display); font-weight: 400; font-size: 1.3rem; }
+.dcard .notes { font-family: var(--mono); font-size: 0.86rem; }
+.dcard p { font-size: 0.88rem; color: var(--muted); }
+
+@media (max-width: 520px) {
+  .brand h1 { font-size: 2.1rem; }
+  .note-big { font-size: 4.4rem; min-height: 4.4rem; }
+}
+</style>
+
+<script>
+// ===== DSP core: shared by the worker, the tuner and node tests =====
+var DSP = (function () {
+  var fftCache = {};
+  function fftTables(n) {
+    if (fftCache[n]) return fftCache[n];
+    var rev = new Uint32Array(n), bits = Math.log2(n) | 0;
+    for (var i = 0; i < n; i++) {
+      var r = 0, x = i;
+      for (var b = 0; b < bits; b++) { r = (r << 1) | (x & 1); x >>= 1; }
+      rev[i] = r;
+    }
+    var cos = new Float64Array(n / 2), sin = new Float64Array(n / 2);
+    for (var k = 0; k < n / 2; k++) { cos[k] = Math.cos(-2 * Math.PI * k / n); sin[k] = Math.sin(-2 * Math.PI * k / n); }
+    return (fftCache[n] = { rev: rev, cos: cos, sin: sin });
+  }
+  // in-place complex FFT (inverse when inv=true, unscaled)
+  function fft(re, im, inv) {
+    var n = re.length, t = fftTables(n), rev = t.rev, i, j;
+    for (i = 0; i < n; i++) {
+      j = rev[i];
+      if (j > i) { var tr = re[i]; re[i] = re[j]; re[j] = tr; var ti = im[i]; im[i] = im[j]; im[j] = ti; }
+    }
+    var sgn = inv ? -1 : 1;
+    for (var size = 2; size <= n; size <<= 1) {
+      var half = size >> 1, step = n / size;
+      for (i = 0; i < n; i += size) {
+        for (j = 0; j < half; j++) {
+          var wr = t.cos[j * step], wi = sgn * t.sin[j * step];
+          var a = i + j, b2 = a + half;
+          var xr = re[b2] * wr - im[b2] * wi, xi = re[b2] * wi + im[b2] * wr;
+          re[b2] = re[a] - xr; im[b2] = im[a] - xi;
+          re[a] += xr; im[a] += xi;
+        }
+      }
+    }
+  }
+
+  // YIN pitch estimate on frame of length 2W. Returns {f0, ap, rms}
+  var ws = {};
+  function work(N) {
+    if (ws.N === N) return ws;
+    var M = N * 2;
+    ws = { N: N, zr: new Float64Array(M), zi: new Float64Array(M), rr: new Float64Array(M), ri: new Float64Array(M), sq: new Float64Array(N + 1), dp: new Float64Array(N) };
+    return ws;
+  }
+  function yin(frame, sr, minF, maxF, thr) {
+    var N = frame.length, W = N >> 1, M = N * 2, w = work(N);
+    var tauMin = Math.max(2, Math.floor(sr / maxF)), tauMax = Math.min(W - 2, Math.ceil(sr / minF));
+    var mean = 0, i;
+    for (i = 0; i < N; i++) mean += frame[i];
+    mean /= N;
+    var zr = w.zr, zi = w.zi, rr = w.rr, ri = w.ri, sq = w.sq, dp = w.dp;
+    var energy = 0;
+    sq[0] = 0;
+    for (i = 0; i < M; i++) {
+      if (i < N) {
+        var v = frame[i] - mean; zr[i] = v; sq[i + 1] = sq[i] + v * v;
+        if (i < W) { zi[i] = v; energy += v * v; } else zi[i] = 0;
+      } else { zr[i] = 0; zi[i] = 0; }
+    }
+    var rms = Math.sqrt(energy / W);
+    if (rms < 1e-6) return { f0: 0, ap: 1, rms: rms };
+    fft(zr, zi, false);
+    // unpack X (real part signal) and Y (imag part signal), R = conj(Y) * X
+    for (i = 0; i < M; i++) {
+      var j = (M - i) & (M - 1);
+      var ar = zr[i], ai = zi[i], br = zr[j], bi = -zi[j];
+      var Xr = 0.5 * (ar + br), Xi = 0.5 * (ai + bi);
+      var Yr = 0.5 * (ai - bi), Yi = -0.5 * (ar - br);
+      rr[i] = Yr * Xr + Yi * Xi; ri[i] = Yr * Xi - Yi * Xr;
+    }
+    fft(rr, ri, true);
+    var e0 = sq[W];
+    dp[0] = 1; var run = 0;
+    var lim = Math.min(tauMax + 1, W);
+    for (var tau = 1; tau <= lim; tau++) {
+      var r = rr[tau] / M;
+      var et = sq[tau + W] - sq[tau];
+      var d = e0 + et - 2 * r; if (d < 0) d = 0;
+      run += d;
+      dp[tau] = run > 0 ? d * tau / run : 1;
+    }
+    var best = -1;
+    for (tau = tauMin; tau <= tauMax; tau++) {
+      if (dp[tau] < thr) {
+        while (tau + 1 <= tauMax && dp[tau + 1] < dp[tau]) tau++;
+        best = tau; break;
+      }
+    }
+    if (best < 0) {
+      var mv = Infinity;
+      for (tau = tauMin; tau <= tauMax; tau++) if (dp[tau] < mv) { mv = dp[tau]; best = tau; }
+    }
+    var ap = dp[best];
+    var t0 = best;
+    if (best > 1 && best < lim) {
+      var s0 = dp[best - 1], s1 = dp[best], s2 = dp[best + 1];
+      var den = s0 + s2 - 2 * s1;
+      if (den !== 0) t0 = best + 0.5 * (s0 - s2) / den;
+    }
+    return { f0: sr / t0, ap: ap, rms: rms };
+  }
+
+  function median(arr) {
+    if (!arr.length) return NaN;
+    var s = arr.slice().sort(function (a, b) { return a - b; });
+    var m = s.length >> 1;
+    return s.length % 2 ? s[m] : 0.5 * (s[m - 1] + s[m]);
+  }
+
+  // Frame-wise pitch track over a whole signal
+  function track(x, sr, opts, onProgress) {
+    opts = opts || {};
+    var W = opts.W || 1024, hop = opts.hop || 320, N = 2 * W;
+    var minF = opts.minF || 60, maxF = opts.maxF || 1600, thr = opts.thr || 0.15;
+    var frames = [], buf = new Float32Array(N);
+    var total = Math.max(0, Math.floor((x.length - N) / hop) + 1);
+    for (var k = 0; k < total; k++) {
+      var off = k * hop;
+      for (var i = 0; i < N; i++) buf[i] = x[off + i];
+      var r = yin(buf, sr, minF, maxF, thr);
+      frames.push({ t: (off + W / 2) / sr, f0: r.f0, ap: r.ap, rms: r.rms });
+      if (onProgress && k % 200 === 0) onProgress(k / total);
+    }
+    return { frames: frames, hopSec: hop / sr };
+  }
+
+  // Turn a pitch track into note events. ref = A4 Hz
+  function segment(tr, ref, opts) {
+    opts = opts || {};
+    var f = tr.frames, hopSec = tr.hopSec, n = f.length, i;
+    if (!n) return [];
+    var rmsSorted = f.map(function (q) { return q.rms; }).sort(function (a, b) { return a - b; });
+    var loud = rmsSorted[Math.floor(0.95 * (n - 1))] || 0;
+    var gate = Math.max(loud * (opts.gate || 0.08), 1e-4);
+    var apMax = opts.apMax || 0.3;
+    var midi = new Float64Array(n), voiced = new Uint8Array(n);
+    for (i = 0; i < n; i++) {
+      if (f[i].f0 > 0 && f[i].ap < apMax && f[i].rms > gate) { voiced[i] = 1; midi[i] = 69 + 12 * Math.log2(f[i].f0 / ref); }
+    }
+    // octave-glitch repair + median smoothing within voiced runs
+    var sm = new Float64Array(n);
+    for (i = 0; i < n; i++) {
+      if (!voiced[i]) continue;
+      var w = [];
+      for (var j = i - 3; j <= i + 3; j++) if (j >= 0 && j < n && voiced[j]) w.push(midi[j]);
+      var md = median(w), v = midi[i], dd = v - md;
+      if (Math.abs(Math.abs(dd) - 12) < 1) v -= 12 * Math.sign(dd);
+      sm[i] = v;
+    }
+    for (i = 0; i < n; i++) {
+      if (!voiced[i]) continue;
+      var w2 = [];
+      for (var j2 = i - 2; j2 <= i + 2; j2++) if (j2 >= 0 && j2 < n && voiced[j2]) w2.push(sm[j2]);
+      midi[i] = median(w2);
+    }
+    // segmentation
+    var notes = [], cur = null, dev = 0, gap = 0;
+    var minFrames = Math.max(3, Math.round((opts.minDur || 0.07) / hopSec));
+    var splitTol = opts.splitTol || 0.55;
+    function close(endIdx) {
+      if (!cur) return;
+      var fr = cur.vals, L = fr.length;
+      if (L >= minFrames) {
+        var a = Math.floor(L * 0.15), b = Math.ceil(L * 0.85);
+        var core = fr.slice(a, Math.max(a + 1, b));
+        notes.push({ on: f[cur.start].t, off: f[endIdx].t, midi: median(core), peak: cur.peak });
+      }
+      cur = null;
+    }
+    for (i = 0; i < n; i++) {
+      if (!voiced[i]) {
+        gap++;
+        if (cur && gap >= 2) close(i - gap);
+        continue;
+      }
+      gap = 0;
+      if (!cur) { cur = { start: i, vals: [midi[i]], peak: f[i].rms }; dev = 0; continue; }
+      var refP = median(cur.vals.slice(-8));
+      // re-articulation onset (repeated note)
+      var lo = Infinity;
+      for (var k = Math.max(cur.start, i - 6); k < i; k++) lo = Math.min(lo, f[k].rms);
+      var onset = cur.vals.length > minFrames && f[i].rms > lo * 1.8 && f[i].rms > gate * 2 && f[i].rms > f[i - 1].rms * 1.25;
+      if (Math.abs(midi[i] - refP) > splitTol) dev++; else dev = 0;
+      if (dev >= 3) {
+        // pitch change: new note started 'dev' frames ago
+        var startNew = i - dev + 1;
+        var keep = cur.vals.slice(0, cur.vals.length - (dev - 1));
+        cur.vals = keep; close(startNew - 1);
+        cur = { start: startNew, vals: [], peak: 0 };
+        for (var q = startNew; q <= i; q++) { cur.vals.push(midi[q]); cur.peak = Math.max(cur.peak, f[q].rms); }
+        dev = 0;
+      } else if (onset) {
+        close(i - 1);
+        cur = { start: i, vals: [midi[i]], peak: f[i].rms };
+      } else {
+        cur.vals.push(midi[i]); cur.peak = Math.max(cur.peak, f[i].rms);
+      }
+    }
+    close(n - 1 - gap);
+    // merge very short neighbours with same pitch
+    var out = [];
+    for (i = 0; i < notes.length; i++) {
+      var nt = notes[i];
+      nt.on = Math.max(0, nt.on);
+      var prev = out[out.length - 1];
+      if (prev && Math.abs(prev.midi - nt.midi) < 0.35 && nt.on - prev.off < hopSec * 1.5 && (nt.off - nt.on) < 0.09) { prev.off = nt.off; continue; }
+      out.push(nt);
+    }
+    return out;
+  }
+
+  // Tempo estimate from onsets: comb-filter phase coherence with a mild prior around 100 BPM
+  function tempo(notes, lo, hi) {
+    lo = lo || 50; hi = hi || 200;
+    if (notes.length < 3) return { bpm: 90, phase: notes.length ? notes[0].on : 0 };
+    var on = notes.map(function (q) { return q.on; });
+    var w = notes.map(function (q) { return Math.min(1.5, Math.max(0.3, q.off - q.on)); });
+    var best = null;
+    for (var bpm = lo; bpm <= hi; bpm += 0.5) {
+      var T = 60 / bpm, sc = 0, ph = 0;
+      [[1, 1], [2, 0.6], [0.5, 0.25]].forEach(function (pr) {
+        var P = T / pr[0], c = 0, s = 0, tw = 0;
+        for (var i = 0; i < on.length; i++) { var a = 2 * Math.PI * on[i] / P; c += w[i] * Math.cos(a); s += w[i] * Math.sin(a); tw += w[i]; }
+        sc += pr[1] * Math.sqrt(c * c + s * s) / tw;
+        if (pr[0] === 1) ph = Math.atan2(s, c);
+      });
+      var prior = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 100) / 0.9, 2));
+      sc *= prior;
+      if (!best || sc > best.sc) best = { sc: sc, bpm: bpm, phase: ph };
+    }
+    var T2 = 60 / best.bpm;
+    var phaseSec = ((best.phase / (2 * Math.PI)) * T2 % T2 + T2) % T2;
+    return { bpm: Math.round(best.bpm), phase: phaseSec };
+  }
+
+  // beat phase (seconds) for a given tempo
+  function phaseAt(notes, bpm) {
+    var T = 60 / bpm, c = 0, s = 0;
+    for (var i = 0; i < notes.length; i++) {
+      var w = Math.min(1.5, Math.max(0.3, notes[i].off - notes[i].on));
+      var a = 2 * Math.PI * notes[i].on / T; c += w * Math.cos(a); s += w * Math.sin(a);
+    }
+    var ph = Math.atan2(s, c);
+    return ((ph / (2 * Math.PI)) * T % T + T) % T;
+  }
+
+  return { fft: fft, yin: yin, track: track, segment: segment, tempo: tempo, phaseAt: phaseAt, median: median };
+})();
+if (typeof module !== 'undefined') module.exports = DSP;
+
+</script>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Per<i>de</i></h1>
+      <p>Gitar ve bağlama için hassas akort</p>
+    </div>
+    <div class="seg" role="tablist" aria-label="Bölüm">
+      <button id="tab-akort" role="tab" aria-selected="true" aria-controls="p-akort">Akort</button>
+      <button id="tab-rehber" role="tab" aria-selected="false" aria-controls="p-rehber">Bağlama rehberi</button>
+    </div>
+  </header>
+
+  <section class="bar" aria-label="Çalgı ve akort ayarı">
+    <div class="seg" id="instr" aria-label="Çalgı" style="justify-self:start">
+      <button type="button" data-i="gitar">Gitar</button>
+      <button type="button" data-i="kisa">Kısa sap</button>
+      <button type="button" data-i="uzun">Uzun sap</button>
+    </div>
+    <div class="opts" id="opts">
+      <label class="field" id="f-gt">Akort <select id="gt"></select></label>
+      <label class="field" id="f-duzen">Düzen <select id="duzen"></select></label>
+      <label class="field" id="f-ahenk">Ahenk <select id="ahenk"></select></label>
+      <label class="field">La4 = <input type="number" id="ref" min="415" max="466" step="0.5" value="440"> Hz</label>
+    </div>
+    <p class="note" id="ahenk-note"></p>
+  </section>
+
+  <!-- TUNER -->
+  <section id="p-akort" role="tabpanel" aria-labelledby="tab-akort" style="display:grid;gap:14px">
+    <div class="tuner">
+      <div class="readout">
+        <div class="note-big" id="t-note">–</div>
+        <div class="cents" id="t-cents">±0,0 sent</div>
+        <div class="dir" id="t-dir"></div>
+        <div class="hz" id="t-hz">Mikrofonu açıp bir tel çal</div>
+      </div>
+      <div class="gauge" id="gauge"></div>
+      <canvas class="strobe" id="strobe" width="880" height="68" aria-label="Strobe göstergesi"></canvas>
+      <div class="strings" id="strings" aria-label="Teller"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+        <button class="btn primary" id="t-start"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5.5" y="1.5" width="5" height="8" rx="2.5"/><path d="M3 7.5a5 5 0 0 0 10 0M8 12.5v2"/></svg><span>Mikrofonu aç</span></button>
+        <button class="btn" id="t-tone"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6v4h3l4 3V3L5 6z"/><path d="M11.5 5.5a3.5 3.5 0 0 1 0 5"/></svg><span>Seçili telin sesini çal</span></button>
+      </div>
+      <div class="status" id="t-status" role="status"></div>
+    </div>
+    <p class="note">Tel seçmezsen en yakın tel otomatik bulunur. Bir tele dokunursan hedef o tele kilitlenir; tekrar dokununca otomatiğe döner. Gösterge 0,1 sent çözünürlükle okur, ±2 sent içinde yeşile döner.</p>
+  </section>
+
+  <!-- GUIDE -->
+  <section id="p-rehber" class="guide" role="tabpanel" aria-labelledby="tab-rehber" hidden>
+    <section>
+      <span class="eyebrow">Temel</span>
+      <h2>Bağlamanın tel grupları</h2>
+      <p>Bağlamada teller üç grup hâlinde takılır. Çalarken yere en yakın grup <b>alt tel</b>, ortadaki <b>orta tel</b>, en üstteki <b>üst tel</b>dir. Çoğu bağlamada alt ve üst grupta birer <b>bam tel</b> bulunur. Bam tel, grubundaki ince telin bir oktav pesine akort edilir.</p>
+      <p>Nota yazımında üç grubun her biri sabit bir nota adı alır. Hangi düzende hangi adların kullanıldığı aşağıda. Bu adlar sazın gerçekte hangi sesi çıkardığını değil, notada nasıl okunduğunu gösterir. Gerçek ses <b>ahenge</b> bağlıdır.</p>
+    </section>
+
+    <section>
+      <span class="eyebrow">Düzenler</span>
+      <h2>Düzen nedir?</h2>
+      <p>Düzen, üç tel grubunun birbirine göre hangi aralıkta akort edildiğidir. Alt tel ve orta tel her düzende aynıdır: alt tel <b>La</b>, orta tel <b>Re</b>. Düzeni belirleyen üst teldir.</p>
+      <div class="duzen-cards">
+        <div class="dcard"><b>Bağlama düzeni</b><span class="notes">Alt La · Orta Re · Üst Mi</span><p>Üst tel, orta telden 1 ses tiz. Halk müziğinde en çok kullanılan düzen; özellikle uzun sapta.</p></div>
+        <div class="dcard"><b>Bozuk düzen</b><span class="notes">Alt La · Orta Re · Üst Sol</span><p>Kara düzen ya da âşık düzeni de denir. Üst tel, orta telden 2,5 ses (tam dörtlü) tiz. Kısa sapta ve âşık geleneğinde yaygındır.</p></div>
+        <div class="dcard"><b>Misket düzeni</b><span class="notes">Alt La · Orta Re · Üst Fa#</span><p>Üst tel, orta telden 2 ses (büyük üçlü) tiz. Bazı yöresel ezgilerde kullanılır.</p></div>
+      </div>
+      <p class="note">Bunların dışında abdal (bozlak), müstezat gibi yöresel düzenler de vardır. Bu akort cihazı en yaygın üç düzeni destekler.</p>
+    </section>
+
+    <section>
+      <span class="eyebrow">Adım adım</span>
+      <h2>Düzene göre akort</h2>
+      <p>Önce ahengini seç, sonra alt telden başla. Her grubu bitirdikten sonra bir tur daha kontrol et; bir teli çekmek sapı az da olsa eğer ve diğer teller kayabilir.</p>
+      <h3 id="steps-title">Bağlama düzeni</h3>
+      <ol id="steps"></ol>
+      <div class="callout">
+        <b>Perde numaraları hakkında</b>
+        <p id="ear"></p>
+      </div>
+    </section>
+
+    <section>
+      <span class="eyebrow">Ahenk</span>
+      <h2>Sazı "Si'ye" ya da "Do'ya" çekmek ne demek?</h2>
+      <p>Bağlama notası, sazın gerçekte hangi sesi çıkardığına bakmadan hep aynı yazılır: alt telin açık sesi notada her zaman <b>La</b>dır. "Sazı Si'ye çekmek", alt teli ve onunla birlikte bütün telleri, notadaki La gerçekte <b>Si</b> sesini verecek kadar yükseltmek demektir. "Do'ya çekmek" de notadaki La'nın gerçekte <b>Do</b> olarak duyulması demektir.</p>
+      <p>Ahenk değişince teller arasındaki aralıklar aynı kalır; yalnızca sazın tamamı birlikte inceler ya da kalınlaşır. Bu yüzden:</p>
+      <ul>
+        <li>Notada yazan perdeler değişmez. Hangi ahenkte olursan ol aynı notayı aynı perdeye basarak çalarsın.</li>
+        <li>Duyulan ezgi ahenk kadar kayar. Do'ya çekili sazda notadaki La, Do olarak; Re, Fa olarak; Mi, Sol olarak duyulur. Ezginin tamamı küçük üçlü (1,5 ses) kaymıştır.</li>
+        <li>Koma perdeleri de aynı oranda kayar. Si♭2 gibi sesler ahenkten bağımsız olarak doğru kalır.</li>
+      </ul>
+      <h3>Ahenk neye göre seçilir?</h3>
+      <ul>
+        <li><b>Okuyanın sesine göre.</b> Türkü söyleyen kişi rahat edecek ahengi ister; sazı onun sesine göre çekersin.</li>
+        <li><b>Birlikte çalınan çalgılara göre.</b> Toplu çalışta bütün sazlar aynı ahenge çekilir. Piyano, keman gibi çalgılar ise ahenk kadar transpoze ederek çalmalıdır.</li>
+        <li><b>Sapın boyuna ve tele göre.</b> Uzun sap bağlamada tel uzun olduğundan genellikle Do civarı, kısa sapta tel kısa olduğundan Fa civarı kullanılır. Tel inceyse ahengi fazla yükseltme; kopabilir ya da sapı zorlayabilir.</li>
+      </ul>
+      <h3 id="ahenk-title">Ahenge göre gerçek sesler</h3>
+      <p class="note" id="ahenk-tbl-note"></p>
+      <div class="tbl"><table id="ahenk-tbl"></table></div>
+    </section>
+
+    <section>
+      <span class="eyebrow">Nota</span>
+      <h2>Notalarda nasıl olmalı?</h2>
+      <ul>
+        <li>Bağlama notası, düzene göre sabit adlarla yazılır. Bağlama düzeninde alt tel La, orta tel Re, üst tel Mi olarak okunur. Bozuk düzende üst tel Sol olur.</li>
+        <li>Notanın başına çoğu zaman yalnızca düzen yazılır. Ahenk, çalanın ve okuyanın kararına bırakılır; aynı nota Si'ye, Do'ya ya da Re'ye çekili sazla çalınabilir.</li>
+        <li>Notada La kararlı yazılmış bir türkü, Do ahenginde gerçekte Do kararlı duyulur. Bir piyanist ya da gitarist sana eşlik edecekse ona notayı ahenk kadar transpoze ederek vermelisin. Do ahengi için 1,5 ses (küçük üçlü) yukarı, Si ahengi için 1 ses yukarı.</li>
+        <li>Bu akort cihazında ekranın büyük harfli nota adı her zaman <b>notadaki</b> adı gösterir. Altındaki "duyulan" satırı gerçek sesi verir. Böylece sazını hangi ahenge çekersen çek, notayla aynı dili konuşur.</li>
+      </ul>
+    </section>
+    <p class="note">Tel sesleri uzun sap için Do, kısa sap için Fa ahengine göre örneklenmiştir. Bu değerler Türkü Sitesi'nin bağlama akort tablosundaki uzun ve kısa sap seslerine dayanır; sazının tel kalınlığına ve sap boyuna göre farklı bir ahenk daha uygun olabilir.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var NAMES = ["Do", "Do#", "Re", "Mi♭", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "Si♭", "Si"];
+  var NAMES_SH = ["Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"];
+  function nm(m) { var r = Math.round(m); return { name: NAMES[((r % 12) + 12) % 12], oct: Math.floor(r / 12) - 1 }; }
+  function nmStr(m) { var n = nm(m); return n.name + n.oct; }
+
+  var GT = {
+    standart: { name: "Standart (Mi La Re Sol Si Mi)", s: [40, 45, 50, 55, 59, 64] },
+    yarim: { name: "Yarım ses pes (Mi♭)", s: [39, 44, 49, 54, 58, 63] },
+    tam: { name: "1 ses pes (Re standart)", s: [38, 43, 48, 53, 57, 62] },
+    dropd: { name: "Drop D (Re La Re Sol Si Mi)", s: [38, 45, 50, 55, 59, 64] },
+    dadgad: { name: "DADGAD (Re La Re Sol La Re)", s: [38, 45, 50, 55, 57, 62] },
+    openg: { name: "Açık Sol (Re Sol Re Sol Si Re)", s: [38, 43, 50, 55, 59, 62] },
+    opend: { name: "Açık Re (Re La Re Fa# La Re)", s: [38, 45, 50, 54, 57, 62] }
+  };
+  // written semitones above the alt tel (La): orta Re is a 5th lower, üst depends on düzen
+  var DUZEN = {
+    baglama: { name: "Bağlama düzeni (La Re Mi)", ust: -5, ustName: "Mi", fret: 3, fretNote: "Mi" },
+    bozuk: { name: "Bozuk / kara düzen (La Re Sol)", ust: -2, ustName: "Sol", fret: 7, fretNote: "Sol" },
+    misket: { name: "Misket düzeni (La Re Fa#)", ust: -3, ustName: "Fa#", fret: 6, fretNote: "Fa#" }
+  };
+  // ahenk: sounding MIDI pitch of the alt tel (written La)
+  var AHENK = [];
+  for (var m = 55; m <= 67; m++) AHENK.push({ id: String(m), alt: m });
+  var DEF_AHENK = { uzun: 60, kisa: 65 };
+
+  var state = { instr: "uzun", gt: "standart", duzen: "baglama", ahenk: { uzun: 60, kisa: 65 }, ref: 440, lock: null };
+  try {
+    var sv = JSON.parse(localStorage.getItem("perde-akort") || "{}");
+    if (sv.instr) state.instr = sv.instr;
+    if (sv.gt && GT[sv.gt]) state.gt = sv.gt;
+    if (sv.duzen && DUZEN[sv.duzen]) state.duzen = sv.duzen;
+    if (sv.ahenk) state.ahenk = sv.ahenk;
+    if (sv.ref) state.ref = sv.ref;
+  } catch (e) {}
+  function save() { try { localStorage.setItem("perde-akort", JSON.stringify({ instr: state.instr, gt: state.gt, duzen: state.duzen, ahenk: state.ahenk, ref: state.ref })); } catch (e) {} }
+  function isSaz() { return state.instr !== "gitar"; }
+  function altMidi() { return state.ahenk[state.instr] || DEF_AHENK[state.instr]; }
+  function shift() { return altMidi() - 69; }   // sounding = written + shift (notadaki alt La -> ahenk sesi)
+  function hz(m) { return state.ref * Math.pow(2, (m - 69) / 12); }
+  function ahenkName(m) { return NAMES[((m % 12) + 12) % 12]; }
+
+  // strings: {label, sub, midi(sounding), written(midi, for saz)}
+  function strings() {
+    if (!isSaz()) {
+      return GT[state.gt].s.map(function (m, i) { return { label: nmStr(m), sub: (6 - i) + ". tel", midi: m, written: m }; });
+    }
+    var a = altMidi(), d = DUZEN[state.duzen], orta = a - 7, ust = a + d.ust;
+    var list = [
+      { label: "La", sub: "Alt tel", midi: a, written: 69 },
+      { label: "Re", sub: "Orta tel", midi: orta, written: 62 },
+      { label: d.ustName, sub: "Üst tel", midi: ust, written: 69 + d.ust }
+    ];
+    list.splice(1, 0, { label: "La", sub: "Alt bam", midi: a - 12, written: 57 });
+    list.push({ label: d.ustName, sub: "Üst bam", midi: ust - 12, written: 57 + d.ust });
+    return list;
+  }
+
+  // ---------- settings UI ----------
+  function fillSelect(sel, items, val) {
+    sel.innerHTML = "";
+    items.forEach(function (it) { var o = document.createElement("option"); o.value = it[0]; o.textContent = it[1]; if (String(it[0]) === String(val)) o.selected = true; sel.appendChild(o); });
+  }
+  function buildSettings() {
+    document.querySelectorAll("#instr button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.i === state.instr)); });
+    $("#f-gt").hidden = isSaz(); $("#f-duzen").hidden = !isSaz(); $("#f-ahenk").hidden = !isSaz();
+    fillSelect($("#gt"), Object.keys(GT).map(function (k) { return [k, GT[k].name]; }), state.gt);
+    fillSelect($("#duzen"), Object.keys(DUZEN).map(function (k) { return [k, DUZEN[k].name]; }), state.duzen);
+    fillSelect($("#ahenk"), AHENK.map(function (h) { return [h.alt, ahenkName(h.alt) + " ahengi (La = " + nmStr(h.alt) + ")" + (h.alt === DEF_AHENK[state.instr] ? " · yaygın" : "")]; }), altMidi());
+    $("#ref").value = state.ref;
+    var n = $("#ahenk-note");
+    if (isSaz()) {
+      var a = altMidi();
+      n.textContent = "Saz " + ahenkName(a) + " ahenginde: alt telin açık sesi notada La, gerçekte " + nmStr(a) + " (" + hz(a).toFixed(2).replace(".", ",") + " Hz). Ekrandaki büyük nota adı her zaman notadaki adıdır.";
+      n.hidden = false;
+    } else n.hidden = true;
+    state.lock = null;
+    buildStrings(); buildGuide();
+  }
+  document.querySelectorAll("#instr button").forEach(function (b) {
+    b.addEventListener("click", function () { state.instr = b.dataset.i; save(); buildSettings(); });
+  });
+  $("#gt").addEventListener("change", function (e) { state.gt = e.target.value; save(); buildSettings(); });
+  $("#duzen").addEventListener("change", function (e) { state.duzen = e.target.value; save(); buildSettings(); });
+  $("#ahenk").addEventListener("change", function (e) { state.ahenk[state.instr] = +e.target.value; save(); buildSettings(); });
+  $("#ref").addEventListener("change", function (e) {
+    var v = parseFloat(e.target.value);
+    if (v >= 415 && v <= 466) { state.ref = v; save(); buildSettings(); } else e.target.value = state.ref;
+  });
+
+  function buildStrings() {
+    var box = $("#strings"); box.innerHTML = "";
+    strings().forEach(function (s, i) {
+      var b = document.createElement("button");
+      b.className = "string"; b.type = "button";
+      b.setAttribute("aria-pressed", String(state.lock === i));
+      b.innerHTML = "<b></b><small></small>";
+      b.querySelector("b").textContent = s.label;
+      b.querySelector("small").textContent = s.sub + " · " + hz(s.midi).toFixed(2).replace(".", ",") + " Hz";
+      b.addEventListener("click", function () {
+        state.lock = state.lock === i ? null : i;
+        box.querySelectorAll(".string").forEach(function (x, j) { x.setAttribute("aria-pressed", String(state.lock === j)); });
+      });
+      box.appendChild(b);
+    });
+  }
+
+  // ---------- tabs ----------
+  function setTab(t) {
+    $("#tab-akort").setAttribute("aria-selected", String(t === "akort"));
+    $("#tab-rehber").setAttribute("aria-selected", String(t === "rehber"));
+    $("#p-akort").hidden = t !== "akort"; $("#p-rehber").hidden = t !== "rehber";
+  }
+  $("#tab-akort").addEventListener("click", function () { setTab("akort"); });
+  $("#tab-rehber").addEventListener("click", function () { setTab("rehber"); });
+
+  // ---------- guide (data-driven parts) ----------
+  function buildGuide() {
+    var dk = state.duzen, d = DUZEN[dk], sap = state.instr === "kisa" ? "kisa" : "uzun", a = state.ahenk[sap] || DEF_AHENK[sap];
+    $("#steps-title").textContent = d.name.split(" (")[0] + " · " + (sap === "uzun" ? "uzun sap" : "kısa sap") + ", " + ahenkName(a) + " ahengi";
+    var orta = a - 7, ust = a + d.ust;
+    var st = [];
+    st.push("<b>Alt teli</b> (notada La) akort cihazında <b>" + nmStr(a) + "</b> sesine getir. Bu sesi senin seçtiğin ahenk belirler.");
+    st.push("<b>Alt bam teli</b> (sazında varsa) bir oktav pese, <b>" + nmStr(a - 12) + "</b> sesine getir.");
+    st.push("<b>Orta teli</b> (notada Re) <b>" + nmStr(orta) + "</b> sesine getir. Kulakla kontrol için orta telde La perdesine (10. perde) bas; alt telin açık sesiyle aynı çıkmalı.");
+    st.push("<b>Üst teli</b> (notada " + d.ustName + ") <b>" + nmStr(ust) + "</b> sesine getir. Kontrol için orta telde " + d.fretNote + " perdesine (" + d.fret + ". perde) bas; üst telin açık sesiyle aynı çıkmalı.");
+    st.push("<b>Üst bam teli</b> (sazında varsa) bir oktav pese, <b>" + nmStr(ust - 12) + "</b> sesine getir.");
+    st.push("Bütün grupları bir tur daha kontrol et. Grubun içindeki teller aynı sesi (bam teller bir oktav pesini) vermeli; aralarında dalgalanma (vuru) duymamalısın.");
+    $("#steps").innerHTML = st.map(function (s) { return "<li>" + s + "</li>"; }).join("");
+    $("#ear").textContent = "Perde numaraları koma perdeleri dahil sayılan standart 17 perdeli diziliş içindir: açık telden sonra 1. perde Mi♭, 2. perde Mi♭2, 3. perde Mi, 4. Fa, 5. Fa#3, 6. Fa#, 7. Sol, 8. Sol#, 9. La♭2, 10. La (orta tele göre adlandırıldı). Sazında perde sayısı farklıysa numara yerine nota adına göre bul.";
+
+    $("#ahenk-title").textContent = "Ahenge göre gerçek sesler · " + d.name.split(" (")[0];
+    $("#ahenk-tbl-note").textContent = "Notadaki adlar her satırda aynıdır: alt La, orta Re, üst " + d.ustName + ". Tablo, her ahenkte tellerin gerçekte hangi sesi verdiğini gösterir. Vurgulu satır şu anki ahengin.";
+    var rows = ['<thead><tr><th>Ahenk</th><th>Alt (La)</th><th>Orta (Re)</th><th>Üst (' + d.ustName + ')</th><th>Alt tel Hz</th></tr></thead><tbody>'];
+    AHENK.forEach(function (h) {
+      var sel = h.alt === a ? ' class="sel"' : "";
+      var note = h.alt === DEF_AHENK.uzun ? " · uzun sapta yaygın" : h.alt === DEF_AHENK.kisa ? " · kısa sapta yaygın" : "";
+      rows.push("<tr" + sel + "><td>" + ahenkName(h.alt) + " ahengi" + note + "</td><td>" + nmStr(h.alt) + "</td><td>" + nmStr(h.alt - 7) + "</td><td>" + nmStr(h.alt + d.ust) + '</td><td class="mono">' + hz(h.alt).toFixed(2).replace(".", ",") + "</td></tr>");
+    });
+    rows.push("</tbody>");
+    $("#ahenk-tbl").innerHTML = rows.join("");
+  }
+
+  // ---------- audio ----------
+  var actx = null;
+  function getCtx() { if (!actx) { var AC = window.AudioContext || window.webkitAudioContext; actx = new AC({ latencyHint: "interactive" }); } return actx; }
+  function micError(e) {
+    var n = e && e.name;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return "Bu sayfada mikrofona erişilemiyor. Uygulamayı https ile başlayan bir adreste aç; akort cihazı orada çalışır. Bu arada tellerin referans sesini çalarak kulaktan akort edebilirsin.";
+    if (n === "NotAllowedError" || n === "SecurityError") return "Mikrofon izni verilmedi. Tarayıcı ayarlarından bu siteye mikrofon izni ver. Bu arada tellerin referans sesini çalarak kulaktan akort edebilirsin.";
+    if (n === "NotFoundError") return "Mikrofon bulunamadı.";
+    return "Mikrofon açılamadı (" + (n || "bilinmeyen hata") + ").";
+  }
+
+  // reference tone: plucked-ish tone with harmonics
+  $("#t-tone").addEventListener("click", function () {
+    var list = strings(), s = list[state.lock !== null ? state.lock : 0];
+    var ctx = getCtx(); if (ctx.resume) ctx.resume();
+    var f = hz(s.midi), t = ctx.currentTime, g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.01); g.gain.exponentialRampToValueAtTime(0.12, t + 1.2); g.gain.linearRampToValueAtTime(0, t + 2.5);
+    g.connect(ctx.destination);
+    [[1, 1], [2, 0.45], [3, 0.25], [4, 0.12]].forEach(function (h) {
+      var o = ctx.createOscillator(), og = ctx.createGain(); o.frequency.value = f * h[0]; og.gain.value = h[1];
+      o.connect(og); og.connect(g); o.start(t); o.stop(t + 2.6);
+    });
+    $("#t-status").classList.remove("err");
+    $("#t-status").textContent = s.sub + " referansı: " + (isSaz() ? "notada " + s.label + ", duyulan " : "") + nmStr(s.midi) + " · " + f.toFixed(2).replace(".", ",") + " Hz";
+  });
+
+  // ---------- tuner ----------
+  var tun = { on: false, hist: [], disp: 0, target: 0, last: 0, strobe: 0, cents: 0, active: false };
+  $("#t-start").addEventListener("click", function () { if (tun.on) stop(); else start(); });
+  function start() {
+    var ctx = getCtx();
+    $("#t-status").textContent = ""; $("#t-status").classList.remove("err");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { fail({}); return; }
+    Promise.resolve(ctx.resume && ctx.resume()).then(function () {
+      return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    }).then(function (stream) {
+      tun.stream = stream; tun.src = ctx.createMediaStreamSource(stream);
+      tun.an = ctx.createAnalyser(); tun.an.fftSize = 8192; tun.an.smoothingTimeConstant = 0;
+      tun.src.connect(tun.an);
+      tun.full = new Float32Array(8192); tun.short = new Float32Array(4096);
+      tun.on = true; tun.hist = []; tun.last = 0;
+      $("#t-start span").textContent = "Durdur";
+      $("#t-hz").textContent = "Dinleniyor…";
+      try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (w) { tun.wake = w; }, function () {}); } catch (e) {}
+      tun.raf = requestAnimationFrame(frame);
+    }).catch(fail);
+  }
+  function fail(e) { var s = $("#t-status"); s.textContent = micError(e); s.classList.add("err"); }
+  function stop() {
+    tun.on = false; cancelAnimationFrame(tun.raf);
+    try { tun.src.disconnect(); } catch (e) {}
+    if (tun.stream) tun.stream.getTracks().forEach(function (t) { t.stop(); });
+    if (tun.wake) { try { tun.wake.release(); } catch (e) {} tun.wake = null; }
+    $("#t-start span").textContent = "Mikrofonu aç";
+    idle();
+  }
+  function idle() {
+    tun.active = false; tun.target = 0;
+    $("#t-note").textContent = "–"; $("#t-cents").textContent = "±0,0 sent"; $("#t-cents").className = "cents"; $("#t-dir").textContent = "";
+    $("#t-hz").textContent = tun.on ? "Dinleniyor…" : "Mikrofonu açıp bir tel çal";
+    document.querySelectorAll(".string").forEach(function (b) { b.classList.remove("hit"); });
+  }
+  function frame() {
+    if (!tun.on) return;
+    var ctx = getCtx(), now = performance.now();
+    tun.an.getFloatTimeDomainData(tun.full);
+    // long window for low strings, short window (latest 4096 samples) for faster response on high strings
+    var r = DSP.yin(tun.full, ctx.sampleRate, 38, 1400, 0.12);
+    if (r.f0 > 260) { tun.short.set(tun.full.subarray(4096)); var r2 = DSP.yin(tun.short, ctx.sampleRate, 200, 1400, 0.12); if (r2.f0 > 0 && r2.ap < 0.2) r = r2; }
+    if (r.f0 > 0 && r.ap < 0.2 && r.rms > 0.003) {
+      var m = 69 + 12 * Math.log2(r.f0 / state.ref);
+      if (tun.hist.length && Math.abs(m - tun.hist[tun.hist.length - 1]) > 0.35) tun.hist = [];
+      tun.hist.push(m); if (tun.hist.length > 9) tun.hist.shift();
+      if (tun.hist.length >= 3) show(DSP.median(tun.hist));
+      tun.last = now;
+    } else if (tun.active && now - tun.last > 1500) idle();
+    tun.disp += (tun.target - tun.disp) * 0.2;
+    setNeedle(tun.disp);
+    drawStrobe(tun.active ? tun.cents : 0, tun.active);
+    tun.raf = requestAnimationFrame(frame);
+  }
+  function show(m) {
+    var list = strings(), idx = state.lock, best = 1e9;
+    if (idx === null) list.forEach(function (s, i) { var d = Math.abs(m - s.midi); if (d < best) { best = d; idx = i; } });
+    var s = list[idx], dev, label, oct;
+    var useString = state.lock !== null || Math.abs(m - s.midi) < 1.5;
+    if (useString) {
+      dev = (m - s.midi) * 100;
+      label = isSaz() ? s.label : nm(s.midi).name; oct = isSaz() ? "" : nm(s.midi).oct;
+    } else {
+      // chromatic: name in written terms for saz
+      var w = isSaz() ? m - shift() : m, r = Math.round(w);
+      dev = (w - r) * 100; label = nm(r).name; oct = isSaz() ? "" : nm(r).oct;
+    }
+    tun.active = true; tun.cents = dev; tun.target = Math.max(-55, Math.min(55, dev));
+    var el = $("#t-note"); el.textContent = label;
+    if (oct !== "") { var sub = document.createElement("sub"); sub.textContent = oct; el.appendChild(sub); }
+    var ad = Math.abs(dev), c = $("#t-cents");
+    if (ad < 100) c.textContent = (dev >= 0 ? "+" : "−") + ad.toFixed(1).replace(".", ",") + " sent";
+    else c.textContent = (dev >= 0 ? "+" : "−") + (ad / 100).toFixed(1).replace(".", ",") + " yarım ses";
+    c.className = "cents " + (ad < 2 ? "good" : ad < 8 ? "warn" : "bad");
+    $("#t-dir").textContent = ad < 2 ? "Akortta" : dev < 0 ? "Pes · teli biraz sık" : "Tiz · teli biraz gevşet";
+    $("#t-dir").style.color = ad < 2 ? "var(--good)" : "var(--ink)";
+    var line = hz(m).toFixed(2).replace(".", ",") + " Hz";
+    if (useString) line += " · hedef " + hz(s.midi).toFixed(2).replace(".", ",") + " Hz · " + s.sub;
+    if (isSaz()) line += " · duyulan " + nmStr(m);
+    $("#t-hz").textContent = line;
+    document.querySelectorAll(".string").forEach(function (b, i) { b.classList.toggle("hit", useString && i === idx && ad < 2); });
+  }
+
+  // gauge
+  function drawGauge() {
+    var cx = 160, cy = 160, R = 130, s = ['<svg viewBox="0 0 320 178" role="img" aria-label="Sent göstergesi">'];
+    function arc(c1, c2, col, w, op) {
+      var a1 = c1 * 1.2 * Math.PI / 180, a2 = c2 * 1.2 * Math.PI / 180, r = R + 4;
+      return '<path d="M' + (cx + r * Math.sin(a1)).toFixed(1) + " " + (cy - r * Math.cos(a1)).toFixed(1) + " A" + r + " " + r + " 0 0 1 " + (cx + r * Math.sin(a2)).toFixed(1) + " " + (cy - r * Math.cos(a2)).toFixed(1) + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" opacity="' + op + '"/>';
+    }
+    s.push(arc(-50, 50, "var(--line)", 7, 1), arc(-8, 8, "var(--warn)", 7, 0.45), arc(-2, 2, "var(--good)", 7, 1));
+    for (var c = -50; c <= 50; c += 5) {
+      var a = c * 1.2 * Math.PI / 180, big = c % 25 === 0, r1 = R - (big ? 16 : 9), r2 = R - 3;
+      s.push('<line x1="' + (cx + r1 * Math.sin(a)).toFixed(1) + '" y1="' + (cy - r1 * Math.cos(a)).toFixed(1) + '" x2="' + (cx + r2 * Math.sin(a)).toFixed(1) + '" y2="' + (cy - r2 * Math.cos(a)).toFixed(1) + '" stroke="var(--muted)" stroke-width="' + (big ? 1.6 : 1) + '"/>');
+      if (big && c !== 0) { var rl = R - 30; s.push('<text x="' + (cx + rl * Math.sin(a)).toFixed(1) + '" y="' + (cy - rl * Math.cos(a) + 4).toFixed(1) + '" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--muted)">' + (c > 0 ? "+" + c : "−" + Math.abs(c)) + "</text>"); }
+    }
+    s.push('<g id="needle" style="transform-origin:160px 160px"><line x1="160" y1="160" x2="160" y2="' + (cy - R + 2) + '" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/></g><circle cx="160" cy="160" r="6" fill="var(--ink)"/></svg>');
+    $("#gauge").innerHTML = s.join("");
+  }
+  function setNeedle(c) { var n = document.getElementById("needle"); if (n) n.style.transform = "rotate(" + (Math.max(-55, Math.min(55, c)) * 1.2).toFixed(2) + "deg)"; }
+  var sctx = $("#strobe").getContext("2d"), cv = {}, cvT = 0;
+  function col(n) { var t = performance.now(); if (t - cvT > 1000) { cv = {}; cvT = t; } return cv[n] || (cv[n] = getComputedStyle(document.documentElement).getPropertyValue(n).trim()); }
+  function drawStrobe(c, active) {
+    var el = $("#strobe"), w = el.width, h = el.height;
+    tun.strobe += active ? Math.max(-30, Math.min(30, c)) * 0.9 : 0;
+    sctx.fillStyle = col("--surface-2"); sctx.fillRect(0, 0, w, h);
+    var ad = Math.abs(c);
+    sctx.fillStyle = active ? (ad < 2 ? col("--good") : ad < 8 ? col("--warn") : col("--accent")) : col("--line");
+    var P = 48, o1 = ((tun.strobe % P) + P) % P, o2 = (((tun.strobe * 2) % P) + P) % P, x;
+    for (x = -P + o1; x < w; x += P) sctx.fillRect(x, 0, P / 2, h / 2);
+    for (x = -P + o2; x < w; x += P) sctx.fillRect(x, h / 2, P / 2, h / 2);
+  }
+
+  drawGauge(); buildSettings(); idle(); drawStrobe(0, false);
+})();
+</script>
+
+</body>
+</html>
